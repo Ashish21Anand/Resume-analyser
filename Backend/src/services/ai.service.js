@@ -57,23 +57,74 @@ async function generateInterviewReport({ resume, selfDescription, jobDescription
 
 
 
-async function generatePdfFromHtml(htmlContent) {
-    const browser = await puppeteer.launch()
-    const page = await browser.newPage();
-    await page.setContent(htmlContent, { waitUntil: "networkidle0" })
+function buildPuppeteerLaunchOptions() {
+    const launchOptions = {
+        headless: true,
+        args: [
+            "--no-sandbox",
+            "--disable-setuid-sandbox",
+            "--disable-dev-shm-usage",
+            "--disable-gpu"
+        ]
+    }
 
-    const pdfBuffer = await page.pdf({
-        format: "A4", margin: {
-            top: "20mm",
-            bottom: "20mm",
-            left: "15mm",
-            right: "15mm"
+    if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+        launchOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH
+    }
+
+    return launchOptions
+}
+
+function normalizeHtmlDocument(htmlContent) {
+    if (htmlContent.trim().toLowerCase().startsWith("<!doctype html")) {
+        return htmlContent
+    }
+
+    return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Resume</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            color: #111827;
         }
-    })
+    </style>
+</head>
+<body>
+    ${htmlContent}
+</body>
+</html>`
+}
 
-    await browser.close()
+async function generatePdfFromHtml(htmlContent) {
+    const browser = await puppeteer.launch(buildPuppeteerLaunchOptions())
 
-    return pdfBuffer
+    try {
+        const page = await browser.newPage()
+        await page.setContent(normalizeHtmlDocument(htmlContent), { waitUntil: "domcontentloaded" })
+        await page.emulateMediaType("screen")
+
+        const pdfBuffer = await page.pdf({
+            format: "A4",
+            printBackground: true,
+            margin: {
+                top: "20mm",
+                bottom: "20mm",
+                left: "15mm",
+                right: "15mm"
+            }
+        })
+
+        return pdfBuffer
+    } finally {
+        await browser.close()
+    }
 }
 
 async function generateResumePdf({ resume, selfDescription, jobDescription }) {

@@ -130,9 +130,9 @@ async function logoutUserController(req, res) {
         await tokenBlacklistModel.create({ token })
     }
 
-    res.clearCookie("token", getClearCookieOptions())
     res.cookie("token", "", {
         ...getClearCookieOptions(),
+        maxAge: 0,
         expires: new Date(0)
     })
 
