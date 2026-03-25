@@ -108,6 +108,67 @@ $severity-low: #3fb950;
         align-items: center;
         flex-shrink: 0;
     }
+
+    &__actions {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    &__action-btn {
+        width: 100%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    &__logout {
+        width: 100%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.45rem;
+        padding: 0.75rem 1rem;
+        border-radius: 1rem;
+        border: 1px solid rgba($accent, 0.28);
+        background-color: rgba($accent, 0.07);
+        color: #ff93b7;
+        font-family: $font-stack;
+        font-size: 0.875rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+
+        &:hover {
+            background-color: rgba($accent, 0.14);
+            border-color: rgba($accent, 0.45);
+            color: #ffd4e3;
+        }
+    }
+}
+
+.interview-user {
+    margin-bottom: 1rem;
+    padding: 0.85rem 0.9rem;
+    border: 1px solid $border-color;
+    border-radius: 0.75rem;
+    background: linear-gradient(180deg, rgba($bg-panel, 0.96) 0%, rgba($bg-input, 0.9) 100%);
+
+    &__eyebrow {
+        display: block;
+        font-size: 0.68rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: $text-muted;
+        margin-bottom: 0.35rem;
+    }
+
+    &__name {
+        margin: 0;
+        font-size: 0.92rem;
+        font-weight: 600;
+        color: $text-primary;
+    }
 }
 
 // ── Center Content ────────────────────────────────────────────────────────────

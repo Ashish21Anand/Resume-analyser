@@ -2,10 +2,12 @@ import React, { useState, useRef } from 'react'
 import "../style/home.scss"
 import { useInterview } from '../hooks/useInterview.js'
 import { useNavigate } from 'react-router'
+import { useAuth } from '../../auth/hooks/useAuth.js'
 
 const Home = () => {
 
     const { loading, generateReport,reports } = useInterview()
+    const { user, handleLogout } = useAuth()
     const [ jobDescription, setJobDescription ] = useState("")
     const [ selfDescription, setSelfDescription ] = useState("")
     const resumeInputRef = useRef()
@@ -18,6 +20,11 @@ const Home = () => {
         navigate(`/interview/${data._id}`)
     }
 
+    const handleLogoutClick = async () => {
+        await handleLogout()
+        navigate("/login")
+    }
+
     if (loading) {
         return (
             <main className='loading-screen'>
@@ -28,6 +35,24 @@ const Home = () => {
 
     return (
         <div className='home-page'>
+            <div className='home-toolbar'>
+                <div className='home-toolbar__brand'>
+                    <span className='home-toolbar__dot' />
+                    <span>Resume Analyser</span>
+                </div>
+                <div className='home-toolbar__actions'>
+                    {user?.username && (
+                        <div className='account-chip'>
+                            <span className='account-chip__label'>Signed in as</span>
+                            <span className='account-chip__value'>{user.username}</span>
+                        </div>
+                    )}
+                    <button onClick={handleLogoutClick} className='logout-btn' type='button'>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
+                        Logout
+                    </button>
+                </div>
+            </div>
 
             {/* Page Header */}
             <header className='page-header'>

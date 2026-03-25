@@ -30,6 +30,82 @@ $font-stack:     system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Robot
     gap: 2rem;
 }
 
+.home-toolbar {
+    width: 100%;
+    max-width: 900px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+
+    &__brand {
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: $text-primary;
+    }
+
+    &__dot {
+        width: 0.7rem;
+        height: 0.7rem;
+        border-radius: 999px;
+        background: linear-gradient(135deg, $accent 0%, $accent-alt 100%);
+        box-shadow: 0 0 18px rgba($accent, 0.4);
+    }
+
+    &__actions {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+}
+
+.account-chip {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.55rem 0.9rem;
+    border-radius: 999px;
+    border: 1px solid $border-color;
+    background-color: rgba($bg-card, 0.92);
+
+    &__label {
+        font-size: 0.75rem;
+        color: $text-muted;
+    }
+
+    &__value {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: $text-primary;
+    }
+}
+
+.logout-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.65rem 1rem;
+    border: 1px solid rgba($accent, 0.35);
+    border-radius: 999px;
+    background-color: rgba($accent, 0.08);
+    color: $accent-alt;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+
+    &:hover {
+        background-color: rgba($accent, 0.14);
+        border-color: rgba($accent, 0.5);
+        color: #ffd5e4;
+    }
+}
+
 // ── Page Header ──────────────────────────────────────────────────────────────
 .page-header {
     text-align: center;
@@ -368,6 +444,17 @@ $font-stack:     system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Robot
 
         &:hover {
             color: $text-primary;
+        }
+    }
+}
+
+@media (max-width: 768px) {
+    .home-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+
+        &__actions {
+            justify-content: space-between;
         }
     }
 }
