@@ -7,6 +7,7 @@ function getCookieOptions() {
     const isProduction = process.env.NODE_ENV === "production"
 
     return {
+        path: "/",
         httpOnly: true,
         secure: isProduction,
         sameSite: isProduction ? "none" : "lax",
@@ -130,6 +131,10 @@ async function logoutUserController(req, res) {
     }
 
     res.clearCookie("token", getClearCookieOptions())
+    res.cookie("token", "", {
+        ...getClearCookieOptions(),
+        expires: new Date(0)
+    })
 
     res.status(200).json({
         message: "User logged out successfully"
