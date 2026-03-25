@@ -57,223 +57,23 @@ async function generateInterviewReport({ resume, selfDescription, jobDescription
 
 
 
-function buildPuppeteerLaunchOptions() {
-    const launchOptions = {
-        headless: true,
-        args: [
-            "--no-sandbox",
-            "--disable-setuid-sandbox",
-            "--disable-dev-shm-usage",
-            "--disable-gpu"
-        ]
-    }
+async function generatePdfFromHtml(htmlContent) {
+    const browser = await puppeteer.launch()
+    const page = await browser.newPage();
+    await page.setContent(htmlContent, { waitUntil: "networkidle0" })
 
-    if (process.env.PUPPETEER_EXECUTABLE_PATH) {
-        launchOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH
-    }
-
-    return launchOptions
-}
-
-function normalizeHtmlDocument(htmlContent) {
-    if (htmlContent.trim().toLowerCase().startsWith("<!doctype html")) {
-        return htmlContent
-    }
-
-    return `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Resume</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: Arial, sans-serif;
-            color: #111827;
+    const pdfBuffer = await page.pdf({
+        format: "A4", margin: {
+            top: "20mm",
+            bottom: "20mm",
+            left: "15mm",
+            right: "15mm"
         }
-    </style>
-</head>
-<body>
-    ${htmlContent}
-</body>
-</html>`
-}
-
-function escapePdfText(value) {
-    return value
-        .replace(/\\/g, "\\\\")
-        .replace(/\(/g, "\\(")
-        .replace(/\)/g, "\\)")
-}
-
-function decodeHtmlEntities(value) {
-    return value
-        .replace(/&nbsp;/g, " ")
-        .replace(/&amp;/g, "&")
-        .replace(/&lt;/g, "<")
-        .replace(/&gt;/g, ">")
-        .replace(/&quot;/g, '"')
-        .replace(/&#39;/g, "'")
-}
-
-function htmlToPlainText(htmlContent) {
-    return decodeHtmlEntities(
-        htmlContent
-            .replace(/<(br|\/p|\/div|\/li|\/h[1-6])[^>]*>/gi, "\n")
-            .replace(/<li[^>]*>/gi, "- ")
-            .replace(/<[^>]+>/g, " ")
-            .replace(/\r/g, "")
-            .replace(/\n{3,}/g, "\n\n")
-            .replace(/[ \t]{2,}/g, " ")
-    ).trim()
-}
-
-function buildPdfBufferFromText(textContent) {
-    const pageWidth = 595
-    const pageHeight = 842
-    const left = 50
-    const top = 790
-    const lineHeight = 16
-    const maxCharsPerLine = 88
-    const paragraphs = textContent.split("\n")
-    const wrappedLines = []
-
-    for (const paragraph of paragraphs) {
-        const normalizedParagraph = paragraph.trim()
-
-        if (!normalizedParagraph) {
-            wrappedLines.push("")
-            continue
-        }
-
-        let currentLine = ""
-        for (const word of normalizedParagraph.split(/\s+/)) {
-            const candidate = currentLine ? `${currentLine} ${word}` : word
-            if (candidate.length > maxCharsPerLine) {
-                if (currentLine) {
-                    wrappedLines.push(currentLine)
-                }
-                currentLine = word
-            } else {
-                currentLine = candidate
-            }
-        }
-
-        if (currentLine) {
-            wrappedLines.push(currentLine)
-        }
-    }
-
-    const linesPerPage = 45
-    const pages = []
-    for (let i = 0; i < wrappedLines.length; i += linesPerPage) {
-        pages.push(wrappedLines.slice(i, i + linesPerPage))
-    }
-
-    if (pages.length === 0) {
-        pages.push([ "Resume content unavailable." ])
-    }
-
-    const objects = [ null, null ]
-    const addObject = (content) => {
-        objects.push(content)
-        return objects.length
-    }
-
-    const fontObjectId = addObject("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>")
-    const pageObjectIds = []
-
-    for (const pageLines of pages) {
-        let contentStream = `BT\n/F1 11 Tf\n${left} ${top} Td\n`
-
-        pageLines.forEach((line, index) => {
-            if (index > 0) {
-                contentStream += `0 -${lineHeight} Td\n`
-            }
-
-            contentStream += `(${escapePdfText(line)}) Tj\n`
-        })
-
-        if (pageLines.length === 0) {
-            contentStream += "(Resume content unavailable.) Tj\n"
-        }
-
-        contentStream += "ET"
-
-        const contentObjectId = addObject(`<< /Length ${Buffer.byteLength(contentStream, "utf8")} >>\nstream\n${contentStream}\nendstream`)
-        const pageObjectId = addObject(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /Font << /F1 ${fontObjectId} 0 R >> >> /Contents ${contentObjectId} 0 R >>`)
-        pageObjectIds.push(pageObjectId)
-    }
-
-    objects[0] = "<< /Type /Catalog /Pages 2 0 R >>"
-    objects[1] = `<< /Type /Pages /Kids [${pageObjectIds.map((id) => `${id} 0 R`).join(" ")}] /Count ${pageObjectIds.length} >>`
-
-    let pdf = "%PDF-1.4\n"
-    const offsets = [ 0 ]
-
-    objects.forEach((objectContent, index) => {
-        offsets.push(Buffer.byteLength(pdf, "utf8"))
-        pdf += `${index + 1} 0 obj\n${objectContent}\nendobj\n`
     })
 
-    const xrefOffset = Buffer.byteLength(pdf, "utf8")
-    pdf += `xref\n0 ${objects.length + 1}\n`
-    pdf += "0000000000 65535 f \n"
+    await browser.close()
 
-    for (let i = 1; i < offsets.length; i++) {
-        pdf += `${String(offsets[i]).padStart(10, "0")} 00000 n \n`
-    }
-
-    pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`
-
-    return Buffer.from(pdf, "utf8")
-}
-
-function buildLocalResumeText({ resume, selfDescription, jobDescription }) {
-    const safeResume = resume?.trim()
-    const safeSelfDescription = selfDescription?.trim()
-    const safeJobDescription = jobDescription?.trim()
-
-    return [
-        "Generated Resume",
-        "",
-        "Professional Summary",
-        safeSelfDescription || "Candidate profile summary was not provided.",
-        "",
-        "Relevant Background",
-        safeResume || "Resume content was not available, so this section was generated from the available profile details.",
-        "",
-        "Target Role Notes",
-        safeJobDescription || "Target job description was not available."
-    ].join("\n")
-}
-
-async function generatePdfFromHtml(htmlContent) {
-    const browser = await puppeteer.launch(buildPuppeteerLaunchOptions())
-
-    try {
-        const page = await browser.newPage()
-        await page.setContent(normalizeHtmlDocument(htmlContent), { waitUntil: "domcontentloaded" })
-        await page.emulateMediaType("screen")
-
-        const pdfBuffer = await page.pdf({
-            format: "A4",
-            printBackground: true,
-            margin: {
-                top: "20mm",
-                bottom: "20mm",
-                left: "15mm",
-                right: "15mm"
-            }
-        })
-
-        return pdfBuffer
-    } finally {
-        await browser.close()
-    }
+    return pdfBuffer
 }
 
 async function generateResumePdf({ resume, selfDescription, jobDescription }) {
@@ -295,25 +95,21 @@ async function generateResumePdf({ resume, selfDescription, jobDescription }) {
                         The resume should not be so lengthy, it should ideally be 1-2 pages long when converted to PDF. Focus on quality rather than quantity and make sure to include all the relevant information that can increase the candidate's chances of getting an interview call for the given job description.
                     `
 
-    try {
-        const response = await ai.models.generateContent({
-            model: "gemini-3-flash-preview",
-            contents: prompt,
-            config: {
-                responseMimeType: "application/json",
-                responseSchema: zodToJsonSchema(resumePdfSchema),
-            }
-        })
+    const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: prompt,
+        config: {
+            responseMimeType: "application/json",
+            responseSchema: zodToJsonSchema(resumePdfSchema),
+        }
+    })
 
-        const jsonContent = JSON.parse(response.text)
-        return await generatePdfFromHtml(jsonContent.html)
-    } catch (error) {
-        console.error("Resume generation failed, falling back to local PDF:", error)
 
-        return buildPdfBufferFromText(
-            buildLocalResumeText({ resume, selfDescription, jobDescription })
-        )
-    }
+    const jsonContent = JSON.parse(response.text)
+
+    const pdfBuffer = await generatePdfFromHtml(jsonContent.html)
+
+    return pdfBuffer
 
 }
 
